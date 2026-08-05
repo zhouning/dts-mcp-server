@@ -18,9 +18,15 @@ classifiers = [
   "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
+  "aiosqlite>=0.21,<1",
   "click>=8.0",
-  "mcp>=1.2",
+  "cryptography>=45",
+  "mcp>=2.0",
   "prompt_toolkit>=3.0",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.10,<3",
+  "starlette>=0.46",
+  "uvicorn[standard]>=0.34",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +52,10 @@ packages = ["src/dts_mcp_server", "src/cli_anything"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Fixtures and the tests using them must share one event loop, or anyio task
+# groups inside the ASGI lifespan are exited from a different task than they were
+# entered in.
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 
 [tool.ruff]

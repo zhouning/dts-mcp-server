@@ -289,3 +289,26 @@ def test_find_engine_dir_raises_with_tried_paths(tmp_path, monkeypatch):
     monkeypatch.setattr("shutil.which", lambda _: None)
     with pytest.raises(EngineNotFound, match="DTS_ENGINE_DIR"):
         find_engine_dir(tmp_path / "empty")
+
+
+def test_roaming_roots_covers_relocated_profile(monkeypatch):
+    """A relocated user profile leaves %APPDATA% on C: while the real folder is
+    on another drive; discovery must probe both."""
+    from cli_anything.dts_engine.core.install import _roaming_roots
+
+    monkeypatch.setenv("APPDATA", r"C:\Users\someone\AppData\Roaming")
+    monkeypatch.setenv("USERPROFILE", r"C:\Users\someone")
+    roots = [str(p) for p in _roaming_roots()]
+    assert r"C:\Users\someone\AppData\Roaming" in roots
+    # The USERPROFILE-derived path is included even when it duplicates APPDATA,
+    # because the two disagree on a redirected profile.
+    assert any("AppData" in r for r in roots)
+
+
+def test_find_engine_dir_discovers_without_env(monkeypatch):
+    """Discovery must work with no DTS_ENGINE_DIR set (real install required)."""
+    from cli_anything.dts_engine.core.install import find_engine_dir
+
+    monkeypatch.delenv("DTS_ENGINE_DIR", raising=False)
+    found = find_engine_dir()
+    assert (found / "EngineWorker.exe").is_file()

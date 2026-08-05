@@ -1,4 +1,4 @@
-"""Verify the server works as a real stdio subprocess.
+"""Verify the local stdio mode works as a real subprocess.
 
 Everything else tests the tool functions in-process. This test launches
 ``python -m dts_mcp_server`` the way an MCP client does and drives a genuine
@@ -23,8 +23,14 @@ def _frame(payload: dict) -> str:
 def _launch() -> subprocess.Popen:
     env = dict(os.environ)
     env.setdefault("PYTHONIOENCODING", "utf-8")
+    # Pass the install through explicitly. Without it the subprocess falls back
+    # to the 9-entry enum instead of Engine's shipped ~90-code table, and the
+    # assertions below would pass or fail depending on the caller's shell.
+    if "DTS_ENGINE_DIR" not in env:
+        from cli_anything.dts_engine.core.install import find_engine_dir
+        env["DTS_ENGINE_DIR"] = str(find_engine_dir())
     return subprocess.Popen(
-        [sys.executable, "-m", "dts_mcp_server"],
+        [sys.executable, "-m", "dts_mcp_server", "--stdio"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

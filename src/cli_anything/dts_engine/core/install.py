@@ -19,13 +19,48 @@ class EngineNotFound(RuntimeError):
     """Raised when no DTS Engine install can be located."""
 
 
+def _roaming_roots() -> list[Path]:
+    """Directories that may hold a per-user "DTS Engine" install.
+
+    %APPDATA% alone is not enough. A relocated user profile leaves %APPDATA%
+    pointing at C: while the actual folder lives on another drive, so the same
+    relative path is probed under every fixed drive as well.
+    """
+    roots: list[Path] = []
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        roots.append(Path(appdata))
+
+    profile = os.environ.get("USERPROFILE")
+    if profile:
+        roots.append(Path(profile) / "AppData" / "Roaming")
+
+    # Same user-relative path on other drives, for a redirected profile.
+    if appdata:
+        tail = Path(appdata)
+        try:
+            relative = tail.relative_to(tail.anchor)
+        except ValueError:
+            relative = None
+        if relative is not None:
+            for letter in "DEFGH":
+                candidate = Path(f"{letter}:\\") / relative
+                if candidate.is_dir():
+                    roots.append(candidate)
+
+    program_files = os.environ.get("ProgramFiles")
+    if program_files:
+        roots.append(Path(program_files))
+    return roots
+
+
 def _candidates() -> list[Path]:
     out: list[Path] = []
     env = os.environ.get(ENV_VAR)
     if env:
         out.append(Path(env))
-    for base in filter(None, (os.environ.get("APPDATA"), os.environ.get("ProgramFiles"))):
-        root = Path(base) / "DTS Engine"
+    for base in _roaming_roots():
+        root = base / "DTS Engine"
         if root.is_dir():
             # Prefer the highest version directory present.
             versions = sorted((d for d in root.iterdir() if d.is_dir()), reverse=True)

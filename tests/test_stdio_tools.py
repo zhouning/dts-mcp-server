@@ -1,4 +1,4 @@
-"""Tests for the MCP layer.
+"""Tests for the local stdio MCP server (dts_mcp_server.stdio_server).
 
 These exercise the server's tool registry and the tool functions directly.
 Tools that do not touch Engine are safe to call anywhere; the ones that publish
@@ -7,7 +7,7 @@ are covered by the E2E tier.
 from __future__ import annotations
 
 from dts_mcp_server import __version__
-from dts_mcp_server.server import (
+from dts_mcp_server.stdio_server import (
     dts_create_job,
     dts_explain_error,
     dts_job_types,
