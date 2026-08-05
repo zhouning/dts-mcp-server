@@ -46,7 +46,7 @@ dts:
   command: D:/adk/standalone/dts-mcp-server/.venv/Scripts/python.exe
   args: ["-m", "dts_mcp_server"]
   env:
-    DTS_ENGINE_DIR: "D:/Users/zn198/AppData/Roaming/DTS Engine/6.1"
+    DTS_ENGINE_DIR: "C:/Users/<you>/AppData/Roaming/DTS Engine/6.1"
 ```
 
 For Claude Code (`.mcp.json`):

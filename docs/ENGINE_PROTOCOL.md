@@ -9,7 +9,7 @@ recoverable command-line contract with 93 flags, a JSON job-file mode, a UDP
 progress channel, and a documented exit-code enum.
 
 Version analysed: `6.1.0525.497`, install tree at
-`%APPDATA%\DTS Engine\6.1` (on this machine `D:\Users\zn198\AppData\Roaming\`).
+`%APPDATA%\DTS Engine\6.1`.
 
 ## How this was recovered
 
