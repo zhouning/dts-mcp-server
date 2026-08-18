@@ -23,6 +23,11 @@ from pathlib import Path
 
 TOKEN = os.environ["DTS_MCP_BEARER_TOKEN"]
 
+#: Kept as a literal rather than imported from cli_anything.dts_engine.core.install,
+#: because this script is meant to run from a client machine that has only Python
+#: and the CA certificate — not the server package. Keep in sync with that module.
+KNOWN_MAJORS = ("6", "7")
+
 
 def make_opener(ca: Path) -> urllib.request.OpenerDirector:
     context = ssl.create_default_context(cafile=str(ca))
@@ -111,7 +116,7 @@ def main() -> int:
     print("\n3. Engine reachable")
     ping = client.call("dts_ping", {})
     check("dts_ping", ping.get("ok") is True, str(ping)[:160])
-    check("Engine version reported", ping["version"].startswith("6."),
+    check("Engine version reported", ping["version"].split(".")[0] in KNOWN_MAJORS,
           ping["version"])
 
     print("\n4. Upload input over the data plane")

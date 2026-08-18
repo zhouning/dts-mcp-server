@@ -19,7 +19,11 @@ import zipfile
 import pytest
 
 from cli_anything.dts_engine.core import errors as errmod
-from cli_anything.dts_engine.core.install import describe_install, find_engine_dir
+from cli_anything.dts_engine.core.install import (
+    KNOWN_MAJORS,
+    describe_install,
+    find_engine_dir,
+)
 from cli_anything.dts_engine.core.publish import publish
 
 MIN_TILE_BYTES = 1_000_000
@@ -121,7 +125,7 @@ def published(fixtures, tmp_path_factory):
 
 def test_install_discovered(engine_dir):
     d = describe_install(engine_dir)
-    assert d["version"].startswith("6.")
+    assert d["version"].split(".")[0] in KNOWN_MAJORS, d["version"]
     assert d["executables"]["EngineWorker.exe"] is True
     assert any("gdal" in g for g in d["gdal"]), "GDAL should be bundled"
 

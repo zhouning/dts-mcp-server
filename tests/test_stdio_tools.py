@@ -6,6 +6,7 @@ are covered by the E2E tier.
 """
 from __future__ import annotations
 
+from cli_anything.dts_engine.core.install import KNOWN_MAJORS
 from dts_mcp_server import __version__
 from dts_mcp_server.stdio_server import (
     dts_create_job,
@@ -161,5 +162,5 @@ def test_ping_finds_the_install():
     """Requires a real install, per the no-graceful-degradation rule."""
     out = _call(dts_ping)()
     assert out["ok"] is True, out.get("error")
-    assert out["version"].startswith("6.")
+    assert out["version"].split(".")[0] in KNOWN_MAJORS, out["version"]
     assert out["executables"]["EngineWorker.exe"] is True

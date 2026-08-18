@@ -14,6 +14,13 @@ WORKER = "EngineWorker.exe"
 MASTER = "EngineMaster.exe"
 SHELL = "Engine.exe"
 
+#: Engine majors this harness has been exercised against. The flag contract was
+#: recovered from 6.1; 7.0 drives the same command line and publishes a valid
+#: .3dt, but its exit codes are less specific (see docs/ENGINE_PROTOCOL.md).
+#: Discovery accepts any tree holding EngineWorker.exe — this only records what
+#: has actually been run, so tests assert against it rather than one literal.
+KNOWN_MAJORS = ("6", "7")
+
 
 class EngineNotFound(RuntimeError):
     """Raised when no DTS Engine install can be located."""
