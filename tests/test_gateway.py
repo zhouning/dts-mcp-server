@@ -12,7 +12,13 @@ import hashlib
 import json
 import zipfile
 
-import httpx
+try:
+    import httpx
+except ModuleNotFoundError:
+    # mcp>=2.0 depends on httpx2, which installs under its own module name. The
+    # ASGITransport/AsyncClient surface used here is identical in both.
+    import httpx2 as httpx
+
 import pytest
 
 from dts_mcp_server.app import create_application
