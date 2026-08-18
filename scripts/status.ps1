@@ -90,16 +90,29 @@ else {
 }
 
 # --- health ------------------------------------------------------------------
-if ($configuredIp) {
-    try {
-        # The gateway uses a private CA, so skip chain validation here; this
-        # checks liveness, not trust. Client-side trust is verified by
-        # verify-connection.sh.
-        $response = Invoke-WebRequest -Uri "https://${configuredIp}:${port}/healthz" `
-            -SkipCertificateCheck -TimeoutSec 5 -UseBasicParsing
-        Write-Host "health     : $($response.Content)"
-    }
-    catch {
-        Write-Host "health     : unreachable ($($_.Exception.Message))"
-    }
+if ($configuredIp -and (Test-Path $python)) {
+    # Probed through Python rather than Invoke-WebRequest: -SkipCertificateCheck
+    # only exists on PowerShell 7+, and on the Windows PowerShell 5.1 that ships
+    # with the OS this step would report every healthy gateway as unreachable.
+    #
+    # The gateway uses a private CA, so chain validation is skipped here; this
+    # checks liveness, not trust. Client-side trust is verified by
+    # verify-connection.sh. ProxyHandler({}) keeps a system HTTPS proxy from
+    # intercepting the LAN address and stalling the handshake.
+    $health = & $python -c @"
+import ssl, urllib.request
+context = ssl.create_default_context()
+context.check_hostname = False
+context.verify_mode = ssl.CERT_NONE
+opener = urllib.request.build_opener(
+    urllib.request.HTTPSHandler(context=context), urllib.request.ProxyHandler({})
+)
+try:
+    with opener.open('https://${configuredIp}:${port}/healthz', timeout=5) as response:
+        print(response.read(200).decode('utf-8', 'replace').strip())
+except Exception as error:
+    print(f'unreachable ({type(error).__name__}: {error})')
+"@ 2>$null
+    if ([string]::IsNullOrWhiteSpace($health)) { $health = 'unreachable (probe failed)' }
+    Write-Host "health     : $health"
 }
