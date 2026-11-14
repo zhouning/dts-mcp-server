@@ -65,8 +65,13 @@ PIPELINES: dict[str, Pipeline] = {
         source="FormMain.cs:3290",
         summary="Tile oblique-photogrammetry OSGB and build the LOD pyramid.",
         notes=(
-            "TWO sequential processes: tiling, then pyramid/LOD. The first "
-            "exiting does not mean the job is done. See run_osgb_two_stage()."
+            "TWO stages, captured from the 7.0 GUI 2026-11-14. Stage 1 = "
+            "EngineMaster (exit 0) spawning one Worker per tile: -handleType=\"\" "
+            "-MasterCreate=true -inpath=<Data/T/T.osgb> -outpath=<out/Data/T> "
+            "-filter=+osgb -> <out>/Data/T/T.3dt (37MB for the 31MB sample). "
+            "Stage 2 = Worker -handleType=osgbLod -inpath=<root> -outpath=<out> "
+            "-> root pyramid <out>/<name>.3dt (~520KB). osgbLod alone never makes "
+            "tile 3DTs. Use publish.publish_osgb(). Empty inpath -> 104."
         ),
     ),
     "vtpk": Pipeline(
@@ -109,6 +114,12 @@ PIPELINES: dict[str, Pipeline] = {
         optional=("allowScanDir", "filter", "xshpoffset", "yshpoffset"),
         source="FormMain.cs:3948",
         summary="Batch-process multiple OSGB datasets.",
+        verified=True,
+        notes=(
+            "Live 2026-11-14 on Engine 7.0: -inpath=<root with metadata.xml + "
+            "Data/Tile_*> exits 0 after ~310s on a 31MB/158-tile sample and "
+            "writes one <dir>_multosgb.3dt of ~139MB -- processes every LOD level."
+        ),
     ),
     "max": Pipeline(
         name="max",
@@ -128,17 +139,29 @@ PIPELINES: dict[str, Pipeline] = {
     ),
     "terrain": Pipeline(
         name="terrain",
-        handle_type=None,
-        required=("dtmjsonpath", "outpath"),
+        handle_type="gdal",
+        required=("domPath", "demPath", "outpath"),
         optional=(
-            "demPath", "domPath", "dtmOverlapMeter", "dtmInnerDownMeter",
-            "dtmInnerEmgenceMeter", "fillvalue", "elevationField",
+            "xshpoffset", "yshpoffset", "domEnableNoValue", "demEnableNoValue",
+            "collision", "fillvalue", "emergenceDem", "emegencelength",
+            "maxMipmapCount", "shpOuterPath", "shpInnerPath", "dtmjsonpath",
+            "dtmOverlapMeter", "dtmInnerDownMeter", "dtmInnerEmgenceMeter",
+            "elevationField",
         ),
-        source="FormMain.cs (terrain tab, -dtmjsonpath template)",
-        summary="Publish terrain from a DTM job description.",
+        source="captured live from Engine 7.0.0814.5654 GUI (EngineMaster cmdline)",
+        summary="Publish terrain (DEM + DOM) to a 3DT tile set.",
+        verified=True,
         notes=(
-            "Driven by a JSON job file, not a handleType. Supplying only "
-            "-domPath/-demPath with no job file fails with code 1."
+            "Terrain is -handleType=gdal (NOT 'terrain', which returns code 2). "
+            "Captured 2026-11-14 from the GUI: -domPath -demPath -outpath "
+            "-xshpoffset=0 -yshpoffset=0 -domEnableNoValue=true "
+            "-demEnableNoValue=true -collision=true -fillvalue=0 -emergenceDem "
+            "-emegencelength=50 -useGeneralEncryptKey=True -maxMipmapCount=1. "
+            "Replayed on EngineWorker directly: full set and the minimal "
+            "domPath+demPath+outpath both exit 0 in ~12s, ~320KB .3dt + "
+            "DataInfor.txt, same size as the GUI run. -dtmjsonpath is optional "
+            "terrain fusion (DTM merge), not the entry point. The .aconf "
+            "-jsonPath mode returns code 1; the GUI does not use it for terrain."
         ),
     ),
 }

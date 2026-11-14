@@ -46,6 +46,15 @@ def publish(
     return result
 
 
+def find_osgb_tiles(inpath: str | Path) -> list[Path]:
+    """Root .osgb of each tile: ``<inpath>/Data/<Tile>/<Tile>.osgb``."""
+    data = Path(inpath) / "Data"
+    if not data.is_dir():
+        return []
+    return [t / f"{t.name}.osgb" for t in sorted(data.iterdir())
+            if t.is_dir() and (t / f"{t.name}.osgb").is_file()]
+
+
 def publish_osgb(
     inpath: str | Path,
     outpath: str | Path,
@@ -55,11 +64,19 @@ def publish_osgb(
     on_line=None,
     **extra,
 ) -> dict:
-    """Publish OSGB as the shell does: tile, then build the LOD pyramid.
+    """Publish OSGB as the GUI does: per-tile conversion, then the LOD pyramid.
 
-    The shell runs these as two separate processes (FormMain.cs:3369 and 3416).
-    A caller that stops after stage one gets an incomplete dataset, so both
-    stages are reported here and ``ok`` requires both to succeed.
+    Captured live from Engine 7.0.0814 (2026-11-14). Stage 1 is EngineMaster,
+    which spawns one EngineWorker per tile with
+    ``-handleType="" -MasterCreate=true -inpath=<Data/T/T.osgb>
+    -outpath=<out/Data/T> -filter=+osgb`` (forward-slash paths). Stage 2 is
+    EngineWorker ``-handleType=osgbLod -inpath=<root> -outpath=<out>``, which
+    writes only the ~0.5MB root pyramid ``<out>/<name>.3dt``.
+
+    We replay stage 1 per tile ourselves instead of via EngineMaster so each
+    tile gets its own exit code. Calling ``osgbLod`` with ``-filter=+osgb`` on
+    the root (the old stage 1) yields only the root pyramid and NO tile 3DTs.
+    ``ok`` requires every tile and the pyramid to succeed.
     """
     base: dict[str, object] = {
         "inpath": str(inpath),
@@ -67,10 +84,28 @@ def publish_osgb(
         **extra,
     }
 
-    stage1 = publish(
-        "osgbLod", {**base, "filter": "+osgb"},
-        engine_dir=engine_dir, timeout=timeout, strict=False, on_line=on_line,
-    )
+    tiles = find_osgb_tiles(inpath)
+    tile_results = []
+    for root in tiles:
+        flags = {
+            **extra,
+            "handleType": "",
+            "MasterCreate": "true",
+            "inpath": root.as_posix(),
+            "outpath": (Path(outpath) / "Data" / root.parent.name).as_posix(),
+            "filter": "+osgb",
+        }
+        r = run_worker(flags, engine_dir=engine_dir, timeout=timeout, on_line=on_line)
+        tile_results.append({"tile": root.parent.name, **r})
+    stage1 = {
+        "ok": bool(tiles) and all(t.get("ok") for t in tile_results),
+        "tile_count": len(tiles),
+        "failed_tiles": [t["tile"] for t in tile_results if not t.get("ok")],
+        "tiles": tile_results,
+    }
+    if not tiles:
+        stage1["error"] = {"code": 104, "band": "lod",
+                           "message": "no <inpath>/Data/<Tile>/<Tile>.osgb found"}
     stages = [{"stage": "tile", **stage1}]
 
     # The shell skips the pyramid when stage one failed and it is not running

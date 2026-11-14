@@ -73,9 +73,9 @@ def test_load_table_falls_back_on_missing_file(tmp_path):
 # ------------------------------------------------------------ pipelines
 
 def test_all_pipelines_retrievable():
-    # 8 handleType pipelines plus job-file-driven `terrain`.
+    # All 9 pipelines carry a handleType; terrain is `gdal` (live-captured 7.0).
     assert len(pipelines.PIPELINES) == 9
-    assert sum(1 for p in pipelines.PIPELINES.values() if p.handle_type) == 8
+    assert sum(1 for p in pipelines.PIPELINES.values() if p.handle_type) == 9
     for name in pipelines.PIPELINES:
         assert pipelines.get(name).name == name
 
@@ -123,9 +123,9 @@ def test_to_flags_injects_handle_type():
     assert pipelines.to_flags("road", {"outpath": "o"})["handleType"] == "road"
 
 
-def test_to_flags_omits_handle_type_for_terrain():
-    """terrain is job-file driven and has no handleType."""
-    assert "handleType" not in pipelines.to_flags("terrain", {"outpath": "o"})
+def test_to_flags_terrain_uses_gdal_handle_type():
+    """terrain publishes via -handleType=gdal (captured from the 7.0 GUI)."""
+    assert pipelines.to_flags("terrain", {"outpath": "o"})["handleType"] == "gdal"
 
 
 def test_road_is_marked_verified():
